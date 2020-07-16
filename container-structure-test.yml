@@ -4,8 +4,8 @@ metadataTest:
   env:
     - key: PATH
       value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-  entrypoint: []
-  cmd: ["bash"]
+  entrypoint: ["/usr/local/bin/docker-entrypoint"]
+  cmd: ["gitlab-runner", "run"]
   exposedPorts: []
   volumes: []
 
