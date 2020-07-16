@@ -9,7 +9,6 @@ ARG GITLAB_RUNNER_VERSION="13.1.1"
 COPY root /
 
 RUN set -xe; \
-    \
     /usr/local/bin/docker-install-requirements runner; \
     docker-package-download -L -v --max-time 3600 -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/v${GITLAB_RUNNER_VERSION}/binaries/gitlab-runner-linux-amd64"; \
     chmod 755 /usr/local/bin/{gitlab-runner,docker-entrypoint}; \
@@ -19,6 +18,7 @@ RUN set -xe; \
 
 ## docker healthcheck
 HEALTHCHECK --interval=30s --timeout=1s --start-period=60s --retries=5 CMD printf "GET /metrics HTTP/1.1\n\n" > /dev/tcp/127.0.0.1/9252
+
 # Replace SIGTERM with SIGQUIT as stop signal to support graceful termination
 STOPSIGNAL SIGQUIT
 
