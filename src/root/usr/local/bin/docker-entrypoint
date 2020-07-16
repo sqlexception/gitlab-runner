@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+# gitlab-runner data directory
+DATA_DIR="/etc/gitlab-runner"
+
+# gitlab runner binary
+GITLAB_RUNNER_BIN=${GITLAB_RUNNER_BIN:-/usr/local/bin/gitlab-runner}
+
+# gitlab runner config file
+CONFIG_FILE=${CONFIG_FILE:-/etc/gitlab-runner/config.toml}
+
+# custom certificate authority path
+CA_CERTIFICATES_PATH=${CA_CERTIFICATES_PATH:-$DATA_DIR/certs/ca.crt}
+LOCAL_CA_PATH="/usr/local/share/ca-certificates/ca.crt"
+
+runner_env() {
+  for i in $(env); do
+    if [[ $i == "RUNNER_ENV_"* ]]; then
+      printf -- "--env %s\n" "${i/#RUNNER_ENV_}"
+    fi
+  done
+}
+
+update_ca() {
+  echo "Updating CA certificates..."
+  cp "${CA_CERTIFICATES_PATH}" "${LOCAL_CA_PATH}"
+  update-ca-certificates --fresh >/dev/null
+}
+
+if [ -f "${CA_CERTIFICATES_PATH}" ]; then
+  # update the ca if the custom ca is different than the current
+  cmp --silent "${CA_CERTIFICATES_PATH}" "${LOCAL_CA_PATH}" || update_ca
+fi
+
+# Register the runner when command is gitlab-runner run
+if [[ "$1" == "gitlab-runner" && "$2" = 'run' && ${REGISTRATION_TOKEN} != "" && ! -e "${CONFIG_FILE}" ]]; then
+
+  # copy initial config file
+  if [[ -e "/mnt/config/gitlab-runner-config.toml" ]]; then
+    cp /mnt/config/gitlab-runner-config.toml ${CONFIG_FILE}
+  fi
+
+  # register the runner
+  ${GITLAB_RUNNER_BIN} register --non-interactive --url ${CI_SERVER_URL} --executor kubernetes $(runner_env) "$@"
+
+  # append volume configuration to config.toml
+  if [[ -e "/mnt/config/gitlab-runner-volumes.toml" ]]; then
+    cat /mnt/config/gitlab-runner-volumes.toml | awk '{print "    "$0}' >> ${CONFIG_FILE}
+  fi
+fi
+
+exec "$@"

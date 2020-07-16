@@ -1,0 +1,27 @@
+FROM quay.io/sqlexception/debian:buster-latest
+
+ARG RUNNER_BUILD_REQUIREMENTS=""
+ARG RUNNER_BUILD_REQUIREMENTS_EXTRA="curl"
+ARG RUNNER_RUNTIME_REQUIREMENTS=""
+ARG RUNNER_RUNTIME_REQUIREMENTS_EXTRA=""
+ARG GITLAB_RUNNER_VERSION="13.1.1"
+
+COPY root /
+
+RUN set -xe; \
+    \
+    /usr/local/bin/docker-install-requirements runner; \
+    docker-package-download -L -v --max-time 3600 -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/v${GITLAB_RUNNER_VERSION}/binaries/gitlab-runner-linux-amd64"; \
+    chmod 755 /usr/local/bin/{gitlab-runner,docker-entrypoint}; \
+    mkdir -p /etc/gitlab-runner/certs; \
+    chmod -R 644 /etc/gitlab-runner; \
+    /usr/local/bin/docker-layer-clean
+
+## docker healthcheck
+#HEALTHCHECK --interval=30s --timeout=1s --start-period=60s --retries=5 CMD curl --fail http://127.0.0.1:9252/metrics
+HEALTHCHECK --interval=30s --timeout=1s --start-period=60s --retries=5 CMD printf "GET /metrics HTTP/1.1\n\n" > /dev/tcp/127.0.0.1/9252
+# Replace SIGTERM with SIGQUIT as stop signal to support graceful termination
+STOPSIGNAL SIGQUIT
+
+ENTRYPOINT ["docker-entrypoint"]
+CMD ["gitlab-runner", "run"]
