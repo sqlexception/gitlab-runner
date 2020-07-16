@@ -7,8 +7,10 @@ ARG RUNNER_RUNTIME_REQUIREMENTS_EXTRA=""
 ARG GITLAB_RUNNER_VERSION="13.1.1"
 
 COPY root /
-# shellcheck disable=SC2039
+
+# hadolint ignore=SC2039
 RUN set -xe; \
+    # shellcheck disable=SC2039
     /usr/local/bin/docker-install-requirements runner; \
     docker-package-download -L -v --max-time 3600 -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/v${GITLAB_RUNNER_VERSION}/binaries/gitlab-runner-linux-amd64"; \
     chmod 755 /usr/local/bin/{gitlab-runner,docker-entrypoint}; \
